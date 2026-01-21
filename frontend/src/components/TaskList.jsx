@@ -4,12 +4,18 @@ import './TaskList.css'
 function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChange }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [editingTask, setEditingTask] = useState(null)
+  const [editingSubtask, setEditingSubtask] = useState(null)
   const [expandedTasks, setExpandedTasks] = useState(new Set(tasks.map(t => t.id)))
   const [openMenuId, setOpenMenuId] = useState(null)
 
-  const filteredTasks = tasks.filter(task =>
+const filteredTasks = tasks.filter(task =>
     task.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  ).sort((a, b) => {
+    // Mover tareas completadas al final
+    if (a.completed && !b.completed) return 1
+    if (!a.completed && b.completed) return -1
+    return 0
+  })
 
   const toggleTaskExpanded = (taskId) => {
     setExpandedTasks(prev => {
@@ -77,7 +83,7 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
     return (completed / task.subtasks.length) * 100
   }
 
-  const handleSelectForPomodoro = (taskId, subtaskIds) => {
+const handleSelectForPomodoro = (taskId, subtaskIds) => {
     onCurrentPomodoroChange({
       ...currentPomodoro,
       taskId,
@@ -85,7 +91,15 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
     })
   }
 
-  const handleAddTask = () => {
+  const handleSelectTaskForPomodoro = (taskId) => {
+    onCurrentPomodoroChange({
+      ...currentPomodoro,
+      taskId,
+      subtaskIds: []
+    })
+  }
+
+const handleAddTask = () => {
     const newTask = {
       id: Date.now(),
       title: 'Nueva tarea',
@@ -97,6 +111,8 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
     }
     onTasksChange([...tasks, newTask])
     setEditingTask(newTask.id)
+    // Expandir automáticamente la nueva tarea para permitir agregar subtareas
+    setExpandedTasks(prev => new Set([...prev, newTask.id]))
   }
 
   const handleCategoryChange = (taskId, newCategory) => {
@@ -124,7 +140,7 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
   }
 
 
-  const handleTaskTitleChange = (taskId, newTitle) => {
+const handleTaskTitleChange = (taskId, newTitle) => {
     const updatedTasks = tasks.map(task => {
       if (task.id === taskId) {
         return { ...task, title: newTitle }
@@ -134,7 +150,23 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
     onTasksChange(updatedTasks)
   }
 
-  const handleAddSubtask = (taskId) => {
+  const handleSubtaskTitleChange = (taskId, subtaskId, newTitle) => {
+    const updatedTasks = tasks.map(task => {
+      if (task.id === taskId) {
+        const updatedSubtasks = task.subtasks.map(subtask => {
+          if (subtask.id === subtaskId) {
+            return { ...subtask, title: newTitle }
+          }
+          return subtask
+        })
+        return { ...task, subtasks: updatedSubtasks }
+      }
+      return task
+    })
+    onTasksChange(updatedTasks)
+  }
+
+const handleAddSubtask = (taskId) => {
     const updatedTasks = tasks.map(task => {
       if (task.id === taskId) {
         const newSubtask = {
@@ -151,6 +183,8 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
       return task
     })
     onTasksChange(updatedTasks)
+    // Activar edición de la nueva subtarea
+    setEditingSubtask(`${taskId}-${Date.now()}`)
   }
 
   const handleArchiveTask = (taskId) => {
@@ -206,7 +240,7 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
           return (
             <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''} ${isSelected ? 'selected' : ''}`}>
               <div className="task-header">
-                <div className="task-main">
+<div className="task-main">
                   <input
                     type="checkbox"
                     checked={task.completed}
@@ -243,6 +277,12 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
                       </span>
                     )}
                   </div>
+                  <button
+                    className="task-select-btn"
+                    onClick={() => handleSelectTaskForPomodoro(task.id)}
+                  >
+                    Seleccionar tarea
+                  </button>
                 </div>
                 <div className="task-menu-container">
                   <button 
@@ -279,26 +319,49 @@ function TaskList({ tasks, onTasksChange, currentPomodoro, onCurrentPomodoroChan
                 </div>
               </div>
 
-              {isExpanded && task.subtasks.length > 0 && (
+              {isExpanded && (
                 <div className="task-subtasks">
-                  {task.subtasks.map(subtask => (
-                    <div key={subtask.id} className="subtask-item">
-                      <input
-                        type="checkbox"
-                        checked={subtask.completed}
-                        onChange={() => toggleSubtaskComplete(task.id, subtask.id)}
-                        className="subtask-checkbox"
-                      />
-                      <span className="subtask-title">{subtask.title}</span>
-                      <span className="subtask-time">{formatTime(subtask.timeSpent)}</span>
-                      <button
-                        className="subtask-select-btn"
-                        onClick={() => handleSelectForPomodoro(task.id, [subtask.id])}
-                      >
-                        Seleccionar
-                      </button>
-                    </div>
-                  ))}
+{task.subtasks.map(subtask => {
+                    const subtaskKey = `${task.id}-${subtask.id}`
+                    const isEditingSubtask = editingSubtask === subtaskKey
+                    return (
+                      <div key={subtask.id} className="subtask-item">
+                        <input
+                          type="checkbox"
+                          checked={subtask.completed}
+                          onChange={() => toggleSubtaskComplete(task.id, subtask.id)}
+                          className="subtask-checkbox"
+                        />
+                        {isEditingSubtask ? (
+                          <input
+                            type="text"
+                            value={subtask.title}
+                            onChange={(e) => handleSubtaskTitleChange(task.id, subtask.id, e.target.value)}
+                            onBlur={() => setEditingSubtask(null)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') setEditingSubtask(null)
+                            }}
+                            className="subtask-title-input"
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className="subtask-title"
+                            onDoubleClick={() => setEditingSubtask(subtaskKey)}
+                          >
+                            {subtask.title}
+                          </span>
+                        )}
+                        <span className="subtask-time">{formatTime(subtask.timeSpent)}</span>
+                        <button
+                          className="subtask-select-btn"
+                          onClick={() => handleSelectForPomodoro(task.id, [subtask.id])}
+                        >
+                          Seleccionar
+                        </button>
+                      </div>
+                    )
+                  })}
                   <button
                     className="add-subtask-btn"
                     onClick={() => handleAddSubtask(task.id)}

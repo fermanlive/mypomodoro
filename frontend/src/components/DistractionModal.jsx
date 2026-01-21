@@ -1,15 +1,22 @@
 import { useState } from 'react'
+import { isAuthenticated } from '../services/auth'
 import './DistractionModal.css'
 
 function DistractionModal({ onClose }) {
   const [distractions, setDistractions] = useState(false)
   const [phoneUsed, setPhoneUsed] = useState(false)
+  const isLoggedIn = isAuthenticated()
 
   const handleSubmit = () => {
     // Aquí se podría enviar la data a un backend
     console.log('Distracciones:', distractions)
     console.log('Celular usado:', phoneUsed)
     onClose()
+  }
+
+  // No mostrar el modal si el usuario no está autenticado
+  if (!isLoggedIn) {
+    return null
   }
 
   return (

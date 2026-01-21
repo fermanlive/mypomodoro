@@ -2,6 +2,8 @@
  * Servicio API para comunicarse con el backend
  */
 
+import { getAuthToken, getUserId } from './auth'
+
 // En desarrollo, usar ruta relativa para aprovechar el proxy de Vite
 // En producción, usar la URL completa desde variables de entorno
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -13,6 +15,10 @@ async function request(endpoint, options = {}) {
   // Si API_URL está vacío, usar ruta relativa (proxy de Vite)
   // Si API_URL tiene valor, usar URL completa (producción)
   const url = API_URL ? `${API_URL}${endpoint}` : endpoint;
+  
+  // Obtener token de autenticación
+  const token = getAuthToken();
+  
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -20,6 +26,11 @@ async function request(endpoint, options = {}) {
     },
     ...options,
   };
+
+  // Añadir token de autenticación si existe
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
 
   if (config.body && typeof config.body === 'object') {
     config.body = JSON.stringify(config.body);
@@ -54,7 +65,9 @@ export const tasksAPI = {
    */
   getAll: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    if (params.userId) queryParams.append('user_id', params.userId);
+    // Si no se especifica userId, usar el ID actual (autenticado o anónimo)
+    const userId = params.userId || getUserId();
+    queryParams.append('user_id', userId);
     if (params.search) queryParams.append('search', params.search);
     
     const queryString = queryParams.toString();
@@ -72,9 +85,14 @@ export const tasksAPI = {
    * Crear una nueva tarea
    */
   create: async (taskData) => {
+    // Asegurar que el user_id se envía
+    const dataWithUserId = {
+      ...taskData,
+      user_id: taskData.user_id || getUserId()
+    };
     return request('/api/v1/tasks', {
       method: 'POST',
-      body: taskData,
+      body: dataWithUserId,
     });
   },
 
@@ -105,8 +123,9 @@ export const subtasksAPI = {
   /**
    * Obtener todas las subtareas de una tarea
    */
-  getByTaskId: async (taskId) => {
-    return request(`/api/v1/subtasks/task/${taskId}`);
+  getByTaskId: async (taskId, userId = null) => {
+    const actualUserId = userId || getUserId();
+    return request(`/api/v1/subtasks/task/${taskId}?user_id=${actualUserId}`);
   },
 
   /**
@@ -120,9 +139,13 @@ export const subtasksAPI = {
    * Crear una nueva subtarea
    */
   create: async (subtaskData) => {
+    const dataWithUserId = {
+      ...subtaskData,
+      user_id: subtaskData.user_id || getUserId()
+    };
     return request('/api/v1/subtasks', {
       method: 'POST',
-      body: subtaskData,
+      body: dataWithUserId,
     });
   },
 
@@ -155,7 +178,8 @@ export const pomodorosAPI = {
    */
   getAll: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    if (params.userId) queryParams.append('user_id', params.userId);
+    const userId = params.userId || getUserId();
+    queryParams.append('user_id', userId);
     if (params.taskId) queryParams.append('task_id', params.taskId);
     if (params.completed !== undefined) queryParams.append('completed', params.completed);
     
@@ -175,7 +199,8 @@ export const pomodorosAPI = {
    */
   getCount: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    if (params.userId) queryParams.append('user_id', params.userId);
+    const userId = params.userId || getUserId();
+    queryParams.append('user_id', userId);
     
     const queryString = queryParams.toString();
     return request(`/api/v1/pomodoros/count${queryString ? `?${queryString}` : ''}`);
@@ -185,9 +210,13 @@ export const pomodorosAPI = {
    * Crear un nuevo pomodoro
    */
   create: async (pomodoroData) => {
+    const dataWithUserId = {
+      ...pomodoroData,
+      user_id: pomodoroData.user_id || getUserId()
+    };
     return request('/api/v1/pomodoros', {
       method: 'POST',
-      body: pomodoroData,
+      body: dataWithUserId,
     });
   },
 
@@ -224,7 +253,8 @@ export const distractionsAPI = {
    */
   getAll: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    if (params.userId) queryParams.append('user_id', params.userId);
+    const userId = params.userId || getUserId();
+    queryParams.append('user_id', userId);
     
     const queryString = queryParams.toString();
     return request(`/api/v1/distractions${queryString ? `?${queryString}` : ''}`);
@@ -248,9 +278,13 @@ export const distractionsAPI = {
    * Crear un registro de distracción
    */
   create: async (distractionData) => {
+    const dataWithUserId = {
+      ...distractionData,
+      user_id: distractionData.user_id || getUserId()
+    };
     return request('/api/v1/distractions', {
       method: 'POST',
-      body: distractionData,
+      body: dataWithUserId,
     });
   },
 };
@@ -264,7 +298,8 @@ export const statisticsAPI = {
    */
   getAll: async (params = {}) => {
     const queryParams = new URLSearchParams();
-    if (params.userId) queryParams.append('user_id', params.userId);
+    const userId = params.userId || getUserId();
+    queryParams.append('user_id', userId);
     
     const queryString = queryParams.toString();
     return request(`/api/v1/statistics${queryString ? `?${queryString}` : ''}`);

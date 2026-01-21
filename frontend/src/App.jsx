@@ -3,49 +3,78 @@ import Header from './components/Header'
 import TaskList from './components/TaskList'
 import PomodoroTimer from './components/PomodoroTimer'
 import DistractionModal from './components/DistractionModal'
-import ApiTest from './components/ApiTest'
+import { isAuthenticated } from './services/auth'
+import { 
+  getTasksFromCache, 
+  saveTasksToCache, 
+  getPomodoroCountFromCache, 
+  savePomodoroCountToCache,
+  getCurrentPomodoroFromCache,
+  saveCurrentPomodoroToCache
+} from './services/cache'
 import './App.css'
 
 function App() {
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: 'Implementar autenticación API',
-      completed: false,
-      category: 'laboral',
-      customCategory: '',
-      subtasks: [
-        { id: 1, title: 'Configurar JWT', completed: false, timeSpent: 0 },
-        { id: 2, title: 'Crear middleware de auth', completed: false, timeSpent: 0 }
-      ],
-      timeSpent: 0
-    },
-    {
-      id: 2,
-      title: 'Optimizar consultas DB',
-      completed: false,
-      category: 'laboral',
-      customCategory: '',
-      subtasks: [
-        { id: 3, title: 'Indexar tablas principales', completed: false, timeSpent: 0 },
-        { id: 4, title: 'Revisar queries N+1', completed: false, timeSpent: 0 }
-      ],
-      timeSpent: 0
-    }
-  ])
+  // Cargar datos del cache si existen
+  const initialTasks = getTasksFromCache().length > 0 
+    ? getTasksFromCache() 
+    : [
+      // Tareas de referencia para futuro desarrollo
+      // {
+      //   id: 1,
+      //   title: 'Implementar autenticación API',
+      //   completed: false,
+      //   category: 'laboral',
+      //   customCategory: '',
+      //   subtasks: [
+      //     { id: 1, title: 'Configurar JWT', completed: false, timeSpent: 0 },
+      //     { id: 2, title: 'Crear middleware de auth', completed: false, timeSpent: 0 }
+      //   ],
+      //   timeSpent: 0
+      // },
+      // {
+      //   id: 2,
+      //   title: 'Optimizar consultas DB', 
+      //   completed: false,
+      //   category: 'laboral',
+      //   customCategory: '',
+      //   subtasks: [
+      //     { id: 3, title: 'Indexar tablas principales', completed: false, timeSpent: 0 },
+      //     { id: 4, title: 'Revisar queries N+1', completed: false, timeSpent: 0 }
+      //   ],
+      //   timeSpent: 0
+      // }
+    ]
 
-  const [currentPomodoro, setCurrentPomodoro] = useState({
+  const initialPomodoro = getCurrentPomodoroFromCache() || {
     objective: '',
     taskId: null,
     subtaskIds: [],
     timer: 5, // 5 segundos para pruebas (normalmente 25 * 60)
     isRunning: false,
     mode: 'pomodoro' // pomodoro, shortBreak, longBreak
-  })
+  }
 
-  const [pomodoroCount, setPomodoroCount] = useState(0)
+  const [tasks, setTasks] = useState(initialTasks)
+  const [currentPomodoro, setCurrentPomodoro] = useState(initialPomodoro)
+  const [pomodoroCount, setPomodoroCount] = useState(getPomodoroCountFromCache())
   const [showDistractionModal, setShowDistractionModal] = useState(false)
   const [distractionModalShown, setDistractionModalShown] = useState([])
+
+  // Guardar tareas en cache cuando cambien
+  useEffect(() => {
+    saveTasksToCache(tasks)
+  }, [tasks])
+
+  // Guardar pomodoro actual en cache cuando cambie
+  useEffect(() => {
+    saveCurrentPomodoroToCache(currentPomodoro)
+  }, [currentPomodoro])
+
+  // Guardar contador de pomodoros en cache cuando cambie
+  useEffect(() => {
+    savePomodoroCountToCache(pomodoroCount)
+  }, [pomodoroCount])
 
   // Lógica para mostrar modal de distracciones
   // Cada 10 pomodoros, 3 veces debe aparecer el modal
@@ -132,7 +161,6 @@ function App() {
   return (
     <div className="app">
       <Header />
-      <ApiTest />
       <div className="app-content">
         <TaskList 
           tasks={tasks}
