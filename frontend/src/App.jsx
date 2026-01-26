@@ -50,7 +50,7 @@ function App() {
     objective: '',
     taskId: null,
     subtaskIds: [],
-    timer: 5, // 5 segundos para pruebas (normalmente 25 * 60)
+    timer: 300, // 5 segundos para pruebas (normalmente 25 * 60)
     isRunning: false,
     mode: 'pomodoro' // pomodoro, shortBreak, longBreak
   }

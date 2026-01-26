@@ -11,9 +11,9 @@ function PomodoroTimer({ currentPomodoro, onCurrentPomodoroChange, tasks, onPomo
   const intervalRef = useRef(null)
 
   const modes = {
-    pomodoro: { label: 'Pomodoro', duration: 5 }, // 5 segundos para pruebas
-    shortBreak: { label: 'Short Break', duration: 5 }, // 5 segundos para pruebas
-    longBreak: { label: 'Long Break', duration: 15 } // 15 segundos para pruebas
+    pomodoro: { label: 'Pomodoro', duration: 1500 }, // 5 segundos para pruebas
+    shortBreak: { label: 'Short Break', duration: 300 }, // 5 segundos para pruebas
+    longBreak: { label: 'Long Break', duration: 900 } // 15 segundos para pruebas
   }
 
   useEffect(() => {
